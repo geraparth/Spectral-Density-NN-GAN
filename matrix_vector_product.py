@@ -31,5 +31,50 @@ def hessian_vector_product(function: Callable[[Parameters], torch.Tensor], param
     return parameters.grad
 
 
+def reduce_function_over_dataset(function: Callable[[Tuple[torch.tensor, torch.tensor]], Parameters],
+                                  dataset: torch.utils.data.Dataset,
+                                  reduce_op: Text = "MEAN") -> Parameters:
+    """Averages or sums f(x) over x in a dataset, for any arbitrary function f.
+
+      Input:
+        function: A function that take as input examples sampled from the dataset,
+          and return a Tensor or list of Tensors.
+        dataset: A dataset that yield the inputs to `function` over which the
+          outputs of `function` should be averaged or summed.
+        reduce_op: Whether to average over the dataset (if set to `MEAN`) or
+          to simply sum the output tensors (if set to `SUM`).
+      Returns:
+        Output of `function` averaged or summed over the dataset.
+      """
+
+    assert reduce_op in ["MEAN", "SUM"]
+    dataset = iter(dataset)
+
+    # We loose a bit of generality by assuming that the dataset yield tuple of
+    # tensors instead of anything that the function can take as input, only to
+    # be able to get the batch size. Fine for now, maybe change later if this ever
+    # becomes a restriction.
+
+    x, y = next(dataset)
+    acc = function((x, y))
+    acc = [acc] if not isinstance(acc, list) else acc
+    accumulated_obs = x.shape[0]
+    for x, y in dataset:
+
+        new_val = function((x, y))
+        new_obs = x.shape[0]
+        w_old = accumulated_obs / (accumulated_obs + new_obs)
+        w_new = new_obs / (accumulated_obs + new_obs)
+        new_val = [new_val] if not isinstance(new_val, list) else new_val
+        for i, value in enumerate(new_val):
+            if reduce_op == "SUM":
+                acc[i] = acc[i] + value
+            else:
+                acc[i] = w_old * acc[i] + w_new * value
+        accumulated_obs += new_obs
+    return acc
+
+
+
 
 
