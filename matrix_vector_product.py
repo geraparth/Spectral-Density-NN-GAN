@@ -84,19 +84,22 @@ def model_hessian_vector_product(
     if reduce_op not in ["MEAN", "SUM"]:
         raise ValueError(
             "`reduce_op` must be in 'MEAN' or 'SUM', but got {}".format(reduce_op))
-    v = torch_list_util.vector_to_tensor_list(v, model.trainable_variables)
+    v = torch_list_util.vector_to_tensor_list(v, list(model.parameters()))
 
     def loss_hessian_vector_product(inputs):
         return hessian_vector_product(
             lambda _: loss_function(model, inputs),
-            model.trainable_variables,
+            list(model.parameters()),
             v)
 
     mvp_as_list_of_tensors = reduce_function_over_dataset(
         loss_hessian_vector_product,
         dataset,
         reduce_op=reduce_op)
+
     return torch_list_util.tensor_list_to_vector(mvp_as_list_of_tensors)
+
+
 
 
 
