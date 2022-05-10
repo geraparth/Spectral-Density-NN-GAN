@@ -75,6 +75,30 @@ def reduce_function_over_dataset(function: Callable[[Tuple[torch.tensor, torch.t
     return acc
 
 
+def model_hessian_vector_product(
+        loss_function,  #: Callable[[tf.keras.Model, Tuple[torch.tensor, torch.tensor]], torch.tensor],
+        model,  #: tf.keras.Model,
+        dataset,  #: tf.data.Dataset,
+        v: torch.tensor,
+        reduce_op: Text = "MEAN") -> torch.tensor:
+    if reduce_op not in ["MEAN", "SUM"]:
+        raise ValueError(
+            "`reduce_op` must be in 'MEAN' or 'SUM', but got {}".format(reduce_op))
+    v = torch_list_util.vector_to_tensor_list(v, model.trainable_variables)
+
+    def loss_hessian_vector_product(inputs):
+        return hessian_vector_product(
+            lambda _: loss_function(model, inputs),
+            model.trainable_variables,
+            v)
+
+    mvp_as_list_of_tensors = reduce_function_over_dataset(
+        loss_hessian_vector_product,
+        dataset,
+        reduce_op=reduce_op)
+    return torch_list_util.tensor_list_to_vector(mvp_as_list_of_tensors)
+
+
 
 
 
