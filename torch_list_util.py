@@ -1,8 +1,14 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[2]:
+
+
 import torch
 from typing import List
 
 
-def tensor_list_to_vector(tor_list: List[torch.tensor]) -> torch.tensor:
+def tensor_list_to_vector(tor_list: torch.tensor) -> torch.tensor:
     """
     Used to convert a model's parameters, which are a list of torch variables
     into a single vector (Input for Lanczos tridiagonalization)
@@ -42,3 +48,4 @@ def vector_to_tensor_list(vector: torch.Tensor, structure: List[torch.Tensor]) -
         index += elements
 
     return tor_list
+

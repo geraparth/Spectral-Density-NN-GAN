@@ -1,12 +1,19 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[2]:
+
+
 from typing import Callable, List, Text, Tuple, Union
 import torch_list_util
 import torch
+from torch.autograd import Variable
+from torch.autograd.functional import hvp
 
 Parameters = Union[torch.tensor, List[torch.tensor]]
 
 
-def hessian_vector_product(function: Callable[[Parameters], torch.Tensor], parameters: Parameters, v: Parameters) -> Parameters:
-
+def hessian_vector_product(function, model, v: Parameters) -> Parameters:
     """
         Computes hessian vector product where v is an arbitrary vector and H is the Hessian
         of a function
@@ -24,16 +31,22 @@ def hessian_vector_product(function: Callable[[Parameters], torch.Tensor], param
             A vector or list of vectors of the same nested structure as `parameters`, equal to H.v.
     """
 
-    grad_f, = torch.autograd.grad(function(parameters), parameters, create_graph=True)
-    z = grad_f.T @ v
-    z.backward()
+    for p in model.parameters():
+        if p.grad is not None:
+            p.grad.data.zero_()
+    grad_f = torch.autograd.grad(function, model.parameters(), create_graph=True)
+    grad_f = torch_list_util.tensor_list_to_vector(list(grad_f))
+    v = torch_list_util.tensor_list_to_vector(v)
 
-    return parameters.grad
-
+    for p in model.parameters():
+        if p.grad is not None:
+            p.grad.data.zero_()
+    hvps = torch.autograd.grad(grad_f, model.parameters(), v, only_inputs=True)
+    return hvps
 
 def reduce_function_over_dataset(function: Callable[[Tuple[torch.tensor, torch.tensor]], Parameters],
-                                  dataset: torch.utils.data.Dataset,
-                                  reduce_op: Text = "MEAN") -> Parameters:
+                                 dataset,
+                                 reduce_op: Text = "MEAN") -> Parameters:
     """Averages or sums f(x) over x in a dataset, for any arbitrary function f.
 
       Input:
@@ -57,7 +70,7 @@ def reduce_function_over_dataset(function: Callable[[Tuple[torch.tensor, torch.t
 
     x, y = next(dataset)
     acc = function((x, y))
-    acc = [acc] if not isinstance(acc, list) else acc
+    acc = list(acc) if not isinstance(acc, list) else acc
     accumulated_obs = x.shape[0]
     for x, y in dataset:
 
@@ -76,9 +89,9 @@ def reduce_function_over_dataset(function: Callable[[Tuple[torch.tensor, torch.t
 
 
 def model_hessian_vector_product(
-        loss_function,  #: Callable[[tf.keras.Model, Tuple[torch.tensor, torch.tensor]], torch.tensor],
-        model,  #: tf.keras.Model,
-        dataset,  #: tf.data.Dataset,
+        loss_function,
+        model,
+        dataset,
         v: torch.tensor,
         reduce_op: Text = "MEAN") -> torch.tensor:
     if reduce_op not in ["MEAN", "SUM"]:
@@ -87,9 +100,10 @@ def model_hessian_vector_product(
     v = torch_list_util.vector_to_tensor_list(v, list(model.parameters()))
 
     def loss_hessian_vector_product(inputs):
+
         return hessian_vector_product(
-            lambda _: loss_function(model, inputs),
-            list(model.parameters()),
+            loss_function(model, inputs),
+            model,
             v)
 
     mvp_as_list_of_tensors = reduce_function_over_dataset(
@@ -98,10 +112,4 @@ def model_hessian_vector_product(
         reduce_op=reduce_op)
 
     return torch_list_util.tensor_list_to_vector(mvp_as_list_of_tensors)
-
-
-
-
-
-
 
