@@ -81,7 +81,7 @@ def imbalancedmnist_DataLoader(image_size, batch_size, shuffle=True, train=True)
 def cifar_DataLoder(image_size, batch_size=128, shuffle=True, train=True, balancedbatch=False):
     root = 'data/'
     transform = transforms.Compose([
-        transforms.Scale(image_size),
+        transforms.Resize(image_size),
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,)),
         _noise_adder,
