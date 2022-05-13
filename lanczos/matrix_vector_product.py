@@ -7,8 +7,6 @@
 from typing import Callable, List, Text, Tuple, Union
 import torch_list_util
 import torch
-from torch.autograd import Variable
-from torch.autograd.functional import hvp
 
 Parameters = Union[torch.tensor, List[torch.tensor]]
 

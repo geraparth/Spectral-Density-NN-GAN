@@ -5,7 +5,7 @@
 
 
 import time
-from typing import Any, Callable, Text, Tuple
+from typing import Callable, Text, Tuple
 import warnings
 
 from torch.autograd import Variable

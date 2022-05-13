@@ -1,11 +1,9 @@
 from matplotlib import pyplot as plt
 import seaborn as sns
-import torch
 from torch import optim
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import lanczos_algorithm
 
 
