@@ -9,12 +9,16 @@ import pickle
 import os
 import copy
 
-num_eigenthings = 100  # compute top 20 eigenvalues/eigenvectors
+num_eigenthings = 100
 model = 'dis'
 use_gpu = True
 mode = 'power_iter'
 norm = False
 epochs = [0, 20000, 40000, 60000, 80000, 100000]
+if norm:
+    save_path = 'experiment/with_batch_norm/models/'
+else:
+    save_path = 'experiment/without_batch_norm/models/'
 
 
 def get_gloss(dis_fake, dis_real, type='log'):
@@ -47,19 +51,12 @@ class dotdict(dict):
 for epoch in epochs:
     print(model, norm, epoch)
     args = dict(dataset='cifar', structure='resnet', losstype='log', batch_size=128, image_size=32,
-                input_dim=128, num_iters=100000, num_features=256, bottleneck=False, g_lr=0.0002,
-                d_lr=0.0002, beta1=0.5, beta2=0.999, g_freq=1, d_freq=1, lr_decay_start=50000,
-                print_freq=100, plot_freq=1000, save_freq=1000, seed=3, ema_trick=False, reload=epoch,
+                input_dim=128, num_iters=100000, num_features=256, bottleneck=False, ema_trick=False, reload=epoch,
                 norm=norm)
 
     args = dotdict(args)
 
-    if norm:
-        save_path = 'experiment/with_batch_norm/models/'
-    else:
-        save_path = 'experiment/without_batch_norm/models/'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # device = 'cpu'
     netG, netD = networks.getGD_SN(args.structure, args.dataset, args.image_size, args.num_features,
                                    dim_z=args.input_dim, bottleneck=args.bottleneck, norm=args.norm)
 
@@ -71,12 +68,6 @@ for epoch in epochs:
                                         map_location=torch.device(device)))
         netD.load_state_dict(torch.load(save_path + 'D_epoch{}.pth'.format(args.reload),
                                         map_location=torch.device(device)))
-        if args.ema_trick:
-            ema_netG_9999.load_state_dict(
-                torch.load(save_path + 'emaG0.9999_epoch{}.pth'.format(args.reload), map_location=torch.device('cpu')))
-
-    # netG = netG.to(device)
-    # netD = netD.to(device)
 
     loader = datasets.getDataLoader(args.dataset, args.image_size, batch_size=args.batch_size)
 
