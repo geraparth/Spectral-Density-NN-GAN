@@ -52,3 +52,6 @@ save_path         # str, directory of the trained models
 
 The script saves a pickle file in the `results` directory. 
 Use `analysis.ipynb` to visualize the spectrum for further analysis.
+
+2 toy examples can be found in `Linear Regression Toy Problem.ipynb` and 
+`Neural Network Toy Problem.ipynb`.
